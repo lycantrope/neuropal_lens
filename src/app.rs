@@ -94,7 +94,7 @@ impl eframe::App for MyApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("NeuroPAL Palette");
+            ui.heading("NeuroPAL Lens");
 
             ui.horizontal(|ui| {
                 ui.label("Search: ");
