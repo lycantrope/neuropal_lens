@@ -1,12 +1,12 @@
 
 use csv::{self, StringRecord};
-use egui::{pos2, Align2, Color32, NumExt as _, Rect, ScrollArea, Sense, TextStyle};
+use egui::{pos2, Align2, NumExt as _, Rect, ScrollArea, Sense, TextStyle};
 use std::collections::HashMap;
 
 
 static NEUROPAL_ORG: &[u8] = include_bytes!("neuropal.csv");
 static NEUROPAL_HEADER: [&str; 7] = ["name", "x", "y", "z", "r", "g", "b"];
-
+#[allow(dead_code)]
 #[derive(serde::Deserialize)]
 struct Neuron {
     name: String,
