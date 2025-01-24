@@ -160,7 +160,13 @@ fn huge_content_painter(ui: &mut egui::Ui, data: Vec<&Neuron>) {
                     let text = neuron.name.as_str();
                     let (r, g, b) = (neuron.r * 255., neuron.g * 255., neuron.b * 255.);
 
-                    let (r, g, b) = (r as u8, g as u8, b as u8);
+                    let (mut r, mut g, mut b) = (r as u8, g as u8, b as u8);
+
+                    if r == 0 && g == 0 && b == 0 {
+                        r = 255;
+                        g = 255;
+                        b = 255;
+                    }
 
                     let text_rect = ui.painter().text(
                         pos2(x, y),
