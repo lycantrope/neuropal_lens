@@ -1881,7 +1881,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "neuropal_viewer"
+name = "neuropal_lens"
 version = "0.1.0"
 dependencies = [
  "csv",

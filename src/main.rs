@@ -19,7 +19,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "NeuroPAL Palette",
         native_options,
-        Box::new(|cc| Ok(Box::new(neuropal_viewer::MyApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(neuropal_lens::MyApp::new(cc)))),
     )
 }
 
@@ -49,7 +49,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(neuropal_viewer::MyApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(neuropal_lens::MyApp::new(cc)))),
             )
             .await;
 

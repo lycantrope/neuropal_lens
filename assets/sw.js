@@ -1,9 +1,9 @@
-var cacheName = 'egui-template-pwa';
+var cacheName = 'neuropal_lens_pwa';
 var filesToCache = [
   './',
   './index.html',
-  './neuropal_viewer.js',
-  './neuropal_viewer.wasm',
+  './neuropal_lens.js',
+  './neuropal_lens.wasm',
 ];
 
 /* Start the service worker and cache all of the app's content */
