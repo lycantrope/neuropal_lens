@@ -92,7 +92,7 @@ impl eframe::App for MyApp {
             });
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::SidePanel::left("SideTool").show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("NeuroPAL Lens");
 
