@@ -1,20 +1,57 @@
+
+use csv::{self, StringRecord};
+use egui::{pos2, Align2, Color32, NumExt as _, Rect, ScrollArea, Sense, TextStyle};
+use std::collections::HashMap;
+
+
+static NEUROPAL_ORG: &[u8] = include_bytes!("neuropal.csv");
+static NEUROPAL_HEADER: [&str; 7] = ["name", "x", "y", "z", "r", "g", "b"];
+
+#[derive(serde::Deserialize)]
+struct Neuron {
+    name: String,
+    x: f32,
+    y: f32,
+    z: f32,
+    r: f32,
+    g: f32,
+    b: f32,
+}
+
+
+
+
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
-    // Example stuff:
     label: String,
 
     #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+    data:HashMap<String, Neuron>
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
+        let header = StringRecord::from(NEUROPAL_HEADER.to_vec());
+
+        let data = csv::ReaderBuilder::new()
+            .delimiter(b',')
+            .from_reader(NEUROPAL_ORG)
+            .records()
+            .filter_map(|x| x.ok())
+            .filter_map( |r| r.deserialize::<Neuron>(Some(&header)).ok())
+            .map(|x| (x.name.to_owned(), x))
+            .collect();
+
+
+
+
         Self {
             // Example stuff:
             label: "Hello World!".to_owned(),
-            value: 2.7,
+            data:data,
         }
     }
 }
@@ -58,7 +95,7 @@ impl eframe::App for TemplateApp {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                     });
-                    ui.add_space(16.0);
+                    ui.add_space(20.0);
                 }
 
                 egui::widgets::global_theme_preference_buttons(ui);
@@ -67,22 +104,18 @@ impl eframe::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
-
+            ui.heading("NeuroPAL Palette");
+            
             ui.horizontal(|ui| {
-                ui.label("Write something: ");
+                ui.label("Search: ");
                 ui.text_edit_singleline(&mut self.label);
             });
 
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
-
-            ui.separator();
-
+            huge_content_painter(ui, self.data.values().filter(|x| x.name.starts_with(&self.label)).collect());
+           
+    
             ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/main/",
+                "https://github.com/lycantrope/NeuroPALette/blob/main/",
                 "Source code."
             ));
 
@@ -106,4 +139,52 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
         );
         ui.label(".");
     });
+}
+
+
+fn huge_content_painter(ui: &mut egui::Ui,data:Vec<&Neuron>) {
+    ui.add_space(4.0);
+    let font_id = TextStyle::Body.resolve(ui.style());
+    let row_height = ui.fonts(|f| f.row_height(&font_id)) + ui.spacing().item_spacing.y;
+
+    let num_rows = data.len();
+    ScrollArea::vertical()
+    .auto_shrink(false)
+    .show_viewport(ui, |ui, viewport| {
+
+        
+        ui.set_height(row_height * num_rows as f32);
+
+        let first_item = (viewport.min.y / row_height).floor().at_least(0.0) as usize;
+        let last_item = (viewport.max.y / row_height).ceil() as usize + 1;
+        let last_item = last_item.at_most(num_rows);
+
+        let mut used_rect = Rect::NOTHING;
+
+        for i in first_item..last_item {
+            let x = ui.min_rect().left();
+            let y = ui.min_rect().top() + i as f32 * row_height;
+            if let Some(neuron) = data.get(i){
+                let text = neuron.name.as_str();
+                let (r, g, b) = (neuron.r * 255., neuron.g * 255., neuron.b * 255.);
+                
+                let (r, g, b) = (r as u8, g as u8,b as u8);
+                
+                let text_rect = ui.painter().text(
+                    pos2(x, y),
+                    Align2::LEFT_TOP,
+                    text,
+                    font_id.clone(),
+                    egui::Color32::from_rgb(r, g, b),
+                    
+                );
+                used_rect = used_rect.union(text_rect);
+
+            }
+        }
+
+        ui.allocate_rect(used_rect, Sense::hover()); // make sure it is visible!
+    });
+
+
 }
