@@ -100,7 +100,7 @@ impl eframe::App for MyApp {
                 ui.label("Search: ");
                 ui.text_edit_singleline(&mut self.label);
             });
-            ui.label(RichText::new("Name  (x, y, z)").font(FontId::monospace(16.0)));
+            ui.label(RichText::new(" Name  (    x,     y,     z)").font(FontId::monospace(16.0)));
             let mut data: Vec<_> = self
                 .data
                 .values()
@@ -147,7 +147,7 @@ fn huge_content_painter(ui: &mut egui::Ui, data: Vec<&Neuron>) {
     ui.add_space(4.0);
     let font_id = FontId::monospace(16.0);
     let row_height = ui.fonts(|f| f.row_height(&font_id)) + ui.spacing().item_spacing.y;
-
+    let row_width = ui.fonts(|f| f.glyph_width(&font_id, 'X')) * 28. + ui.spacing().item_spacing.x;
     let num_rows = data.len();
     ScrollArea::vertical()
         .auto_shrink(false)
@@ -161,7 +161,7 @@ fn huge_content_painter(ui: &mut egui::Ui, data: Vec<&Neuron>) {
             let mut used_rect = Rect::NOTHING;
 
             for i in first_item..last_item {
-                let x = ui.min_rect().left();
+                let x = ui.min_rect().left() + ui.spacing().item_spacing.x;
                 let y = ui.min_rect().top() + i as f32 * row_height;
                 if let Some(neuron) = data.get(i) {
                     let text = neuron.name.as_str();
@@ -181,7 +181,7 @@ fn huge_content_painter(ui: &mut egui::Ui, data: Vec<&Neuron>) {
                         egui::Color32::WHITE
                     };
                     ui.painter().rect(
-                        Rect::from_min_max(pos2(x, y), pos2(x + 240., y + row_height)),
+                        Rect::from_min_max(pos2(x, y), pos2(x + row_width, y + row_height)),
                         0.0f32,
                         egui::Color32::from_rgb(r, g, b),
                         (0.0, egui::Color32::from_rgb(r, g, b)),
@@ -190,7 +190,7 @@ fn huge_content_painter(ui: &mut egui::Ui, data: Vec<&Neuron>) {
                         pos2(x, y),
                         Align2::LEFT_TOP,
                         format!(
-                            "{:<5} ({:.1},{:.1},{:.1})",
+                            "{:<5} ({:>5.1}, {:>5.1}, {:>5.1})",
                             text, neuron.x, neuron.y, neuron.z
                         ),
                         font_id.clone(),
