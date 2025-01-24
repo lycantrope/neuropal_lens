@@ -41,7 +41,7 @@ impl Default for MyApp {
         Self {
             // Example stuff:
             label: "Hello World!".to_owned(),
-            data: data,
+            data,
         }
     }
 }
