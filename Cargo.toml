@@ -1,5 +1,5 @@
 [package]
-name = "NeuroPALette"
+name = "neuropal_viewer"
 version = "0.1.0"
 authors = ["Chung-Kuan Chen <b97b01045@gmail.com>"]
 edition = "2021"

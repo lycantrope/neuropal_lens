@@ -1,7 +1,3 @@
-
-#[allow(dead_code)]
-#[allow(non_snake_case)]
-
 use csv::{self, StringRecord};
 use egui::{pos2, Align2, NumExt as _, Rect, ScrollArea, Sense, TextStyle};
 use std::collections::HashMap;
@@ -27,14 +23,14 @@ struct Neuron {
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
-pub struct TemplateApp {
+pub struct MyApp {
     label: String,
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     data:HashMap<String, Neuron>
 }
 
-impl Default for TemplateApp {
+impl Default for MyApp {
     fn default() -> Self {
         let header = StringRecord::from(NEUROPAL_HEADER.to_vec());
 
@@ -58,7 +54,7 @@ impl Default for TemplateApp {
     }
 }
 
-impl TemplateApp {
+impl MyApp {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
@@ -74,7 +70,7 @@ impl TemplateApp {
     }
 }
 
-impl eframe::App for TemplateApp {
+impl eframe::App for MyApp {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
@@ -175,7 +171,7 @@ fn huge_content_painter(ui: &mut egui::Ui,data:Vec<&Neuron>) {
                 let text_rect = ui.painter().text(
                     pos2(x, y),
                     Align2::LEFT_TOP,
-                    text,
+                    format!("{} ({:.1},{:.1},{:.1})", text, neuron.x,neuron.y,neuron.z) ,
                     font_id.clone(),
                     egui::Color32::from_rgb(r, g, b),
                     
