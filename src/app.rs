@@ -1,5 +1,5 @@
 use csv::{self, StringRecord};
-use egui::{pos2, Align2, FontId, NumExt as _, Rect, RichText, ScrollArea, Sense};
+use egui::{pos2, Align2, FontId, NumExt as _, Rect, RichText, ScrollArea, Sense, Theme};
 use egui_plot::{PlotPoints, Points};
 
 use std::collections::HashMap;
@@ -15,6 +15,19 @@ struct Neuron {
     r: f32,
     g: f32,
     b: f32,
+}
+
+impl Neuron {
+    pub fn rgb(&self) -> [u8; 3] {
+        [
+            (self.r * 255.).clamp(0., 255.) as u8,
+            (self.g * 255.).clamp(0., 255.) as u8,
+            (self.b * 255.).clamp(0., 255.) as u8,
+        ]
+    }
+    pub fn luminance(&self) -> f32 {
+        0.2126 * self.r + 0.7152 * self.g + 0.0722 * self.b
+    }
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -175,7 +188,7 @@ fn huge_content_painter(ui: &mut egui::Ui, data: &[&Neuron]) {
                     let text = neuron.name.as_str();
                     let (r, g, b) = (neuron.r * 255., neuron.g * 255., neuron.b * 255.);
 
-                    let lut = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    let lut = neuron.luminance();
                     let (mut r, mut g, mut b) = (r as u8, g as u8, b as u8);
 
                     if r == 0 && g == 0 && b == 0 {
@@ -183,7 +196,7 @@ fn huge_content_painter(ui: &mut egui::Ui, data: &[&Neuron]) {
                         g = 255;
                         b = 255;
                     }
-                    let text_color = if lut == 0.0 || lut > 112.5 {
+                    let text_color = if lut == 0.0 || lut > 0.5 {
                         egui::Color32::BLACK
                     } else {
                         egui::Color32::WHITE
@@ -213,6 +226,7 @@ fn huge_content_painter(ui: &mut egui::Ui, data: &[&Neuron]) {
 }
 
 fn worm_canvas(ui: &mut egui::Ui, data: &[&Neuron]) {
+    let is_dark = ui.ctx().theme() == Theme::Dark;
     egui_plot::Plot::new("plot")
         .data_aspect(1.0)
         .allow_zoom(true)
@@ -220,27 +234,33 @@ fn worm_canvas(ui: &mut egui::Ui, data: &[&Neuron]) {
         .allow_scroll(true)
         // .legend(Legend::default())
         .show(ui, |plot_ui| {
+            let boundary = plot_ui.plot_bounds();
+            let scale = boundary.max()[0] - boundary.min()[0];
+            let radius = (scale * -0.01 + 6.).clamp(1.0, 6.);
+
             for neuron in data {
                 let pts = vec![[neuron.x as f64, neuron.y as f64]];
                 let points = PlotPoints::new(pts);
-                let (r, g, b) = (neuron.r * 255., neuron.g * 255., neuron.b * 255.);
+                let [r, g, b] = neuron.rgb();
 
-                let (mut r, mut g, mut b) = (r as u8, g as u8, b as u8);
-                if r == 0 && g == 0 && b == 0 {
-                    r = 255;
-                    g = 255;
-                    b = 255;
+                let mut color = if r == 0 && g == 0 && b == 0 && is_dark {
+                    egui::Color32::WHITE
+                } else {
+                    let [r, g, b] = neuron.rgb();
+                    egui::Color32::from_rgb(r, g, b)
+                };
+
+                if neuron.z < 0.0 {
+                    color = color.gamma_multiply(0.8);
                 }
 
-                let color = egui::Color32::from_rgb(r, g, b);
-                // let sine_points = PlotPoints::from_explicit_callback(|x| x.sin(), .., 5000);
                 plot_ui.points(
                     Points::new(points)
                         .name(&neuron.name)
                         .allow_hover(true)
                         .color(color)
                         .highlight(true)
-                        .radius(2.5),
+                        .radius(radius as f32),
                 );
             }
         });
