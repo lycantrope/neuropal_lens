@@ -1,5 +1,7 @@
 use csv::{self, StringRecord};
 use egui::{pos2, Align2, FontId, NumExt as _, Rect, RichText, ScrollArea, Sense};
+use egui_plot::{PlotPoints, Points};
+
 use std::collections::HashMap;
 
 static NEUROPAL_ORG: &[u8] = include_bytes!("neuropal.csv");
@@ -92,6 +94,20 @@ impl eframe::App for MyApp {
             });
         });
 
+        let mut data: Vec<_> = self
+            .data
+            .values()
+            .filter(|x| {
+                [" ", ";", ","].iter().any(|delimiter| {
+                    self.label
+                        .split(delimiter)
+                        .filter(|x| !x.is_empty())
+                        .any(|pat| pat == "*" || x.name.starts_with(pat))
+                })
+            })
+            .collect();
+        data.sort_unstable_by_key(|x| &x.name);
+
         egui::SidePanel::left("SideTool").show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("NeuroPAL Lens");
@@ -101,20 +117,8 @@ impl eframe::App for MyApp {
                 ui.text_edit_singleline(&mut self.label);
             });
             ui.label(RichText::new(" Name  (    x,     y,     z)").font(FontId::monospace(16.0)));
-            let mut data: Vec<_> = self
-                .data
-                .values()
-                .filter(|x| {
-                    [" ", ";", ","].iter().any(|delimiter| {
-                        self.label
-                            .split(delimiter)
-                            .filter(|x| !x.is_empty())
-                            .any(|pat| pat == "*" || x.name.starts_with(pat))
-                    })
-                })
-                .collect();
-            data.sort_unstable_by_key(|x| &x.name);
-            huge_content_painter(ui, data);
+
+            huge_content_painter(ui, &data);
 
             ui.add(egui::github_link_file!(
                 "https://github.com/lycantrope/NeuroPALette/blob/main/",
@@ -125,6 +129,10 @@ impl eframe::App for MyApp {
                 powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
             });
+        });
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            worm_canvas(ui, &data);
         });
     }
 }
@@ -143,7 +151,7 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
     });
 }
 
-fn huge_content_painter(ui: &mut egui::Ui, data: Vec<&Neuron>) {
+fn huge_content_painter(ui: &mut egui::Ui, data: &[&Neuron]) {
     ui.add_space(4.0);
     let font_id = FontId::monospace(16.0);
     let row_height = ui.fonts(|f| f.row_height(&font_id)) + ui.spacing().item_spacing.y;
@@ -201,5 +209,39 @@ fn huge_content_painter(ui: &mut egui::Ui, data: Vec<&Neuron>) {
             }
 
             ui.allocate_rect(used_rect, Sense::hover()); // make sure it is visible!
+        });
+}
+
+fn worm_canvas(ui: &mut egui::Ui, data: &[&Neuron]) {
+    egui_plot::Plot::new("plot")
+        .data_aspect(1.0)
+        .allow_zoom(true)
+        .allow_drag(true)
+        .allow_scroll(true)
+        // .legend(Legend::default())
+        .show(ui, |plot_ui| {
+            for neuron in data {
+                let pts = vec![[neuron.x as f64, neuron.y as f64]];
+                let points = PlotPoints::new(pts);
+                let (r, g, b) = (neuron.r * 255., neuron.g * 255., neuron.b * 255.);
+
+                let (mut r, mut g, mut b) = (r as u8, g as u8, b as u8);
+                if r == 0 && g == 0 && b == 0 {
+                    r = 255;
+                    g = 255;
+                    b = 255;
+                }
+
+                let color = egui::Color32::from_rgb(r, g, b);
+                // let sine_points = PlotPoints::from_explicit_callback(|x| x.sin(), .., 5000);
+                plot_ui.points(
+                    Points::new(points)
+                        .name(&neuron.name)
+                        .allow_hover(true)
+                        .color(color)
+                        .highlight(true)
+                        .radius(2.5),
+                );
+            }
         });
 }
