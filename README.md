@@ -3,7 +3,7 @@
 [![dependency status](https://deps.rs/repo/github/lycantrope/neuropal_lens/status.svg)](https://deps.rs/repo/github/lycantrope/neuropal_lens)
 [![Build Status](https://github.com/lycantrope/neuropal_lens/workflows/CI/badge.svg)](https://github.com/lycantrope/neuropal_lens/actions?workflow=CI)
 
-NeuroPAL Lens is a Rust-based application designed to facilitate the visualization and analysis of neurons in *Caenorhabditis elegans* labeled using the NeuroPAL system. This app enables users to check neuron [colors](10.1016/j.cell.2020.12.012) and [positions](10.1186/s12859-022-04738-3).
+NeuroPAL Lens is a Rust-based application designed to facilitate the visualization and analysis of neurons in *Caenorhabditis elegans* labeled using the NeuroPAL system. This app enables users to check neuron colors (Ref: 10.1016/j.cell.2020.12.012) and positions (Ref: 10.1186/s12859-022-04738-3).
 
 ## Features
 

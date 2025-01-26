@@ -1,6 +1,6 @@
 use csv::{self, StringRecord};
-use egui::{pos2, Align2, FontId, NumExt as _, Rect, RichText, ScrollArea, Sense, Theme};
-use egui_plot::{PlotPoints, Points};
+use egui::{pos2, Align2, Color32, FontId, NumExt as _, Rect, RichText, ScrollArea, Sense, Theme};
+use egui_plot::{HLine, PlotPoints, Points, VLine};
 
 use std::collections::HashMap;
 
@@ -145,7 +145,7 @@ impl eframe::App for MyApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            worm_canvas(ui, &data);
+            worm_canvas(ctx, ui, &data);
         });
     }
 }
@@ -225,13 +225,17 @@ fn huge_content_painter(ui: &mut egui::Ui, data: &[&Neuron]) {
         });
 }
 
-fn worm_canvas(ui: &mut egui::Ui, data: &[&Neuron]) {
+fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
     let is_dark = ui.ctx().theme() == Theme::Dark;
-    egui_plot::Plot::new("plot")
+    let response = egui_plot::Plot::new("xy")
         .data_aspect(1.0)
         .allow_zoom(true)
         .allow_drag(true)
         .allow_scroll(true)
+        .allow_double_click_reset(true)
+        .allow_boxed_zoom(true)
+        .include_x(0.0)
+        .include_y(0.0)
         // .legend(Legend::default())
         .show(ui, |plot_ui| {
             let boundary = plot_ui.plot_bounds();
@@ -264,4 +268,144 @@ fn worm_canvas(ui: &mut egui::Ui, data: &[&Neuron]) {
                 );
             }
         });
+
+    let pos = response
+        .response
+        .hover_pos()
+        .map(|pos| response.transform.value_from_position(pos));
+    let thickness = 1.5;
+
+    let bound = response.transform.bounds();
+    let x_bound = (bound.min()[0], bound.max()[0]);
+    let yz_window = egui::Window::new("yz view")
+        .id(egui::Id::new("yz")) // required since we change the title
+        .resizable(true)
+        .constrain(true)
+        .collapsible(true)
+        .title_bar(true)
+        .scroll(true)
+        .enabled(true);
+
+    yz_window.show(ctx, |ui| {
+        egui_plot::Plot::new("yz")
+            .data_aspect(1.0)
+            .allow_zoom(true)
+            .allow_drag(true)
+            .allow_scroll(true)
+            .allow_double_click_reset(true)
+            .allow_boxed_zoom(true)
+            .include_x(-25.0)
+            .include_y(-25.0)
+            .include_x(25.0)
+            .include_y(25.0)
+            // .legend(Legend::default())
+            .show(ui, |plot_ui| {
+                let boundary = plot_ui.plot_bounds();
+                let scale = boundary.max()[0] - boundary.min()[0];
+                let radius = (scale * -0.01 + 6.).clamp(1.0, 6.);
+                if let Some(pos) = pos {
+                    plot_ui.hline(HLine::new(pos.y).color(Color32::LIGHT_RED));
+                }
+
+                for neuron in data {
+                    let pts = vec![[neuron.z as f64, neuron.y as f64]];
+                    if pos.is_some_and(|pos| {
+                        let x_pos = neuron.x as f64;
+                        let low = pos.x - thickness;
+                        let high = pos.x + thickness;
+                        x_pos < low || x_pos > high
+                    }) {
+                        continue;
+                    }
+
+                    let points = PlotPoints::new(pts);
+                    let [r, g, b] = neuron.rgb();
+
+                    let mut color = if r == 0 && g == 0 && b == 0 && is_dark {
+                        egui::Color32::WHITE
+                    } else {
+                        let [r, g, b] = neuron.rgb();
+                        egui::Color32::from_rgb(r, g, b)
+                    };
+
+                    if neuron.z < 0.0 {
+                        color = color.gamma_multiply(0.8);
+                    }
+
+                    plot_ui.points(
+                        Points::new(points)
+                            .name(&neuron.name)
+                            .allow_hover(true)
+                            .color(color)
+                            .highlight(true)
+                            .radius(radius as f32),
+                    );
+                }
+            });
+    });
+    let xz_window = egui::Window::new("xy view")
+        .id(egui::Id::new("xz")) // required since we change the title
+        .resizable(true)
+        .constrain(true)
+        .collapsible(true)
+        .title_bar(true)
+        .scroll(true)
+        .enabled(true);
+
+    xz_window.show(ctx, |ui| {
+        egui_plot::Plot::new("xz")
+            .data_aspect(1.0)
+            .allow_zoom(true)
+            .allow_drag(true)
+            .allow_scroll(true)
+            .allow_double_click_reset(true)
+            .allow_boxed_zoom(true)
+            .include_x(0.0)
+            .include_y(0.0)
+            // .legend(Legend::default())
+            .show(ui, |plot_ui| {
+                let boundary = plot_ui.plot_bounds();
+                let scale = boundary.max()[0] - boundary.min()[0];
+                let radius = (scale * -0.01 + 6.).clamp(1.0, 6.);
+
+                if let Some(pos) = pos {
+                    plot_ui.vline(VLine::new(pos.x).color(Color32::LIGHT_RED));
+                }
+                for neuron in data {
+                    let pts = vec![[neuron.x as f64, neuron.z as f64]];
+                    if pos.is_some_and(|pos| {
+                        let x_pos = neuron.x as f64;
+                        let y_pos = neuron.y as f64;
+                        let y_low = pos.y - thickness;
+                        let y_high = pos.y + thickness;
+                        let (x_low, x_high) = x_bound;
+                        y_pos < y_low || y_pos > y_high || x_pos < x_low || x_pos > x_high
+                    }) {
+                        continue;
+                    }
+                    let points = PlotPoints::new(pts);
+                    let [r, g, b] = neuron.rgb();
+
+                    let mut color = if r == 0 && g == 0 && b == 0 && is_dark {
+                        egui::Color32::WHITE
+                    } else {
+                        let [r, g, b] = neuron.rgb();
+                        egui::Color32::from_rgb(r, g, b)
+                    };
+
+                    if neuron.z < 0.0 {
+                        color = color.gamma_multiply(0.8);
+                    }
+
+                    plot_ui.points(
+                        Points::new(points)
+                            .name(&neuron.name)
+                            .allow_hover(true)
+                            .color(color)
+                            .highlight(true)
+                            .radius(radius as f32),
+                    );
+                }
+            });
+    });
 }
