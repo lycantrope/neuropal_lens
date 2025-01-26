@@ -1,5 +1,7 @@
 use csv::{self, StringRecord};
-use egui::{pos2, Align2, Button, Color32, FontId, NumExt as _, Rect, RichText, ScrollArea, Sense, Theme};
+use egui::{
+    pos2, Align2, Button, Color32, FontId, NumExt as _, Rect, RichText, ScrollArea, Sense, Theme,
+};
 use egui_plot::{HLine, PlotPoints, Points, Text, VLine};
 
 use std::collections::HashMap;
@@ -39,7 +41,7 @@ pub struct MyApp {
     #[serde(skip)] // This how you opt-out of serialization of a field
     data: HashMap<String, Neuron>,
 
-    show_side_panel:bool
+    show_side_panel: bool,
 }
 
 impl Default for MyApp {
@@ -59,7 +61,7 @@ impl Default for MyApp {
             // Example stuff:
             label: "*".to_owned(),
             data,
-            show_side_panel:true,
+            show_side_panel: true,
         }
     }
 }
@@ -108,10 +110,10 @@ impl eframe::App for MyApp {
                 egui::widgets::global_theme_preference_switch(ui);
                 ui.separator();
                 let mut btn = Button::new(RichText::new("Filter Panel").monospace());
-                if self.show_side_panel{
-                    btn = btn.fill(Color32::from_rgba_unmultiplied(22, 131, 240, 120)) ;
+                if self.show_side_panel {
+                    btn = btn.fill(Color32::from_rgba_unmultiplied(22, 131, 240, 120));
                 };
-                if ui.add(btn).clicked(){
+                if ui.add(btn).clicked() {
                     self.show_side_panel = !self.show_side_panel;
                 };
                 egui::warn_if_debug_build(ui);
@@ -131,8 +133,8 @@ impl eframe::App for MyApp {
             })
             .collect();
         data.sort_unstable_by_key(|x| &x.name);
-        
-        if self.show_side_panel{
+
+        if self.show_side_panel {
             egui::SidePanel::left("SideTool").show(ctx, |ui| {
                 // The central panel the region left after adding TopPanel's and SidePanel's
                 ui.horizontal(|ui| {
@@ -145,13 +147,15 @@ impl eframe::App for MyApp {
                     );
                     ui.label(")");
                 });
-    
+
                 ui.horizontal(|ui| {
                     ui.label("Search: ");
                     ui.text_edit_singleline(&mut self.label);
                 });
-                ui.label(RichText::new(" Name  (    x,     y,     z)").font(FontId::monospace(16.0)));
-    
+                ui.label(
+                    RichText::new(" Name  (    x,     y,     z)").font(FontId::monospace(16.0)),
+                );
+
                 huge_content_painter(ui, &data);
             });
         }
@@ -284,9 +288,7 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
         .collapsible(true)
         .title_bar(true)
         .scroll(true)
-        .enabled(true)
-        ;
-        
+        .enabled(true);
 
     yz_window.show(ctx, |ui| {
         egui_plot::Plot::new("yz")
