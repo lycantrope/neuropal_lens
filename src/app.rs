@@ -237,6 +237,8 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
         .include_x(0.0)
         .include_y(0.0)
         // .legend(Legend::default())
+        .x_axis_label("Anterior - Posterior")
+        .y_axis_label("Ventral - Dorsal")
         .show(ui, |plot_ui| {
             let boundary = plot_ui.plot_bounds();
             let scale = boundary.max()[0] - boundary.min()[0];
@@ -294,10 +296,12 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
             .allow_scroll(true)
             .allow_double_click_reset(true)
             .allow_boxed_zoom(true)
-            .include_x(-25.0)
+            .include_x(-15.0)
+            .include_x(15.0)
+            .include_y(20.0)
             .include_y(-25.0)
-            .include_x(25.0)
-            .include_y(25.0)
+            .x_axis_label("Right - Left")
+            .y_axis_label("Ventral - Dorsal")
             // .legend(Legend::default())
             .show(ui, |plot_ui| {
                 let boundary = plot_ui.plot_bounds();
@@ -329,9 +333,11 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
                                     .filled(false)
                                     .radius(radius as f32 + 2.0),
                             );
-                            let text_pos =
-                                [neuron.z as f64 + radius / 2., neuron.y as f64 + radius / 2.]
-                                    .into();
+                            let text_pos = [
+                                neuron.z as f64 + radius / 1.5,
+                                neuron.y as f64 + radius / 1.5,
+                            ]
+                            .into();
 
                             plot_ui.text(Text::new(text_pos, &neuron.name).highlight(true));
                         }
@@ -379,9 +385,12 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
             .allow_scroll(true)
             .allow_double_click_reset(true)
             .allow_boxed_zoom(true)
-            .include_x(0.0)
-            .include_y(0.0)
-            // .legend(Legend::default())
+            .include_x(x_bound.0)
+            .include_x(x_bound.1)
+            .include_y(15.0)
+            .include_y(-15.0)
+            .x_axis_label("Anterior - Posterior")
+            .y_axis_label("Left - Right")
             .show(ui, |plot_ui| {
                 let boundary = plot_ui.plot_bounds();
                 let scale = boundary.max()[0] - boundary.min()[0];
@@ -413,8 +422,8 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
                                     .radius(radius as f32 + 2.0),
                             );
                             let text_pos = [
-                                neuron.x as f64 + radius / 2.,
-                                -neuron.z as f64 + radius / 2.,
+                                neuron.x as f64 + radius / 1.5,
+                                -neuron.z as f64 + radius / 1.5,
                             ]
                             .into();
 
