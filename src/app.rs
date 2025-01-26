@@ -1,5 +1,5 @@
 use csv::{self, StringRecord};
-use egui::{pos2, Align2, Color32, FontId, NumExt as _, Rect, RichText, ScrollArea, Sense, Theme};
+use egui::{pos2, Align2, Button, Color32, FontId, NumExt as _, Rect, RichText, ScrollArea, Sense, Theme};
 use egui_plot::{HLine, PlotPoints, Points, Text, VLine};
 
 use std::collections::HashMap;
@@ -38,6 +38,8 @@ pub struct MyApp {
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     data: HashMap<String, Neuron>,
+
+    show_side_panel:bool
 }
 
 impl Default for MyApp {
@@ -57,6 +59,7 @@ impl Default for MyApp {
             // Example stuff:
             label: "*".to_owned(),
             data,
+            show_side_panel:true,
         }
     }
 }
@@ -100,10 +103,18 @@ impl eframe::App for MyApp {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                     });
-                    ui.add_space(20.0);
+                    ui.separator();
                 }
-
-                egui::widgets::global_theme_preference_buttons(ui);
+                egui::widgets::global_theme_preference_switch(ui);
+                ui.separator();
+                let mut btn = Button::new(RichText::new("Filter Panel").monospace());
+                if self.show_side_panel{
+                    btn = btn.fill(Color32::from_rgba_unmultiplied(22, 131, 240, 120)) ;
+                };
+                if ui.add(btn).clicked(){
+                    self.show_side_panel = !self.show_side_panel;
+                };
+                egui::warn_if_debug_build(ui);
             });
         });
 
@@ -120,48 +131,34 @@ impl eframe::App for MyApp {
             })
             .collect();
         data.sort_unstable_by_key(|x| &x.name);
-
-        egui::SidePanel::left("SideTool").show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("NeuroPAL Lens");
-
-            ui.horizontal(|ui| {
-                ui.label("Search: ");
-                ui.text_edit_singleline(&mut self.label);
+        
+        if self.show_side_panel{
+            egui::SidePanel::left("SideTool").show(ctx, |ui| {
+                // The central panel the region left after adding TopPanel's and SidePanel's
+                ui.horizontal(|ui| {
+                    ui.heading(RichText::new("NeuroPAL Lens"));
+                    ui.spacing_mut().item_spacing.x = 0.0;
+                    ui.label("(");
+                    ui.hyperlink_to(
+                        "\u{E624} Source code.",
+                        "https://github.com/lycantrope/neuropal_lens",
+                    );
+                    ui.label(")");
+                });
+    
+                ui.horizontal(|ui| {
+                    ui.label("Search: ");
+                    ui.text_edit_singleline(&mut self.label);
+                });
+                ui.label(RichText::new(" Name  (    x,     y,     z)").font(FontId::monospace(16.0)));
+    
+                huge_content_painter(ui, &data);
             });
-            ui.label(RichText::new(" Name  (    x,     y,     z)").font(FontId::monospace(16.0)));
-
-            huge_content_painter(ui, &data);
-
-            ui.add(egui::github_link_file!(
-                "https://github.com/lycantrope/NeuroPALette/blob/main/",
-                "Source code."
-            ));
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
-            });
-        });
-
+        }
         egui::CentralPanel::default().show(ctx, |ui| {
             worm_canvas(ctx, ui, &data);
         });
     }
-}
-
-fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/master/crates/eframe",
-        );
-        ui.label(".");
-    });
 }
 
 fn huge_content_painter(ui: &mut egui::Ui, data: &[&Neuron]) {
@@ -228,6 +225,7 @@ fn huge_content_painter(ui: &mut egui::Ui, data: &[&Neuron]) {
 fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
     let is_dark = ui.ctx().theme() == Theme::Dark;
     let response = egui_plot::Plot::new("xy")
+        .height(500.)
         .data_aspect(1.0)
         .allow_zoom(true)
         .allow_drag(true)
@@ -286,7 +284,9 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
         .collapsible(true)
         .title_bar(true)
         .scroll(true)
-        .enabled(true);
+        .enabled(true)
+        ;
+        
 
     yz_window.show(ctx, |ui| {
         egui_plot::Plot::new("yz")
