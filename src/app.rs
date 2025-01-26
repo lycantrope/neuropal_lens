@@ -1,6 +1,6 @@
 use csv::{self, StringRecord};
 use egui::{pos2, Align2, Color32, FontId, NumExt as _, Rect, RichText, ScrollArea, Sense, Theme};
-use egui_plot::{HLine, PlotPoints, Points, VLine};
+use egui_plot::{HLine, PlotPoints, Points, Text, VLine};
 
 use std::collections::HashMap;
 
@@ -55,7 +55,7 @@ impl Default for MyApp {
 
         Self {
             // Example stuff:
-            label: "Hello World!".to_owned(),
+            label: "*".to_owned(),
             data,
         }
     }
@@ -273,11 +273,11 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
         .response
         .hover_pos()
         .map(|pos| response.transform.value_from_position(pos));
-    let thickness = 1.5;
 
+    let thickness = 1.5;
     let bound = response.transform.bounds();
     let x_bound = (bound.min()[0], bound.max()[0]);
-    let yz_window = egui::Window::new("yz view")
+    let yz_window = egui::Window::new("Anterior View (z-y)")
         .id(egui::Id::new("yz")) // required since we change the title
         .resizable(true)
         .constrain(true)
@@ -309,13 +309,32 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
 
                 for neuron in data {
                     let pts = vec![[neuron.z as f64, neuron.y as f64]];
-                    if pos.is_some_and(|pos| {
+                    if let Some(pos) = pos {
                         let x_pos = neuron.x as f64;
+                        let y_pos = neuron.y as f64;
                         let low = pos.x - thickness;
                         let high = pos.x + thickness;
-                        x_pos < low || x_pos > high
-                    }) {
-                        continue;
+
+                        if x_pos < low || x_pos > high {
+                            continue;
+                        }
+
+                        let dist = ((pos.x - x_pos).powi(2) + (pos.y - y_pos).powi(2)).sqrt();
+                        if dist < 0.35 {
+                            plot_ui.vline(VLine::new(neuron.z).color(Color32::LIGHT_RED));
+                            let points = PlotPoints::new(pts.clone());
+                            plot_ui.points(
+                                Points::new(points)
+                                    .color(egui::Color32::LIGHT_RED)
+                                    .filled(false)
+                                    .radius(radius as f32 + 2.0),
+                            );
+                            let text_pos =
+                                [neuron.z as f64 + radius / 2., neuron.y as f64 + radius / 2.]
+                                    .into();
+
+                            plot_ui.text(Text::new(text_pos, &neuron.name).highlight(true));
+                        }
                     }
 
                     let points = PlotPoints::new(pts);
@@ -343,7 +362,7 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
                 }
             });
     });
-    let xz_window = egui::Window::new("xy view")
+    let xz_window = egui::Window::new("Dorsal View (x-z)")
         .id(egui::Id::new("xz")) // required since we change the title
         .resizable(true)
         .constrain(true)
@@ -372,16 +391,35 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
                     plot_ui.vline(VLine::new(pos.x).color(Color32::LIGHT_RED));
                 }
                 for neuron in data {
-                    let pts = vec![[neuron.x as f64, neuron.z as f64]];
-                    if pos.is_some_and(|pos| {
-                        let x_pos = neuron.x as f64;
-                        let y_pos = neuron.y as f64;
+                    let pts = vec![[neuron.x as f64, -neuron.z as f64]];
+                    if let Some(pos) = pos {
                         let y_low = pos.y - thickness;
                         let y_high = pos.y + thickness;
                         let (x_low, x_high) = x_bound;
-                        y_pos < y_low || y_pos > y_high || x_pos < x_low || x_pos > x_high
-                    }) {
-                        continue;
+                        let x_pos = neuron.x as f64;
+                        let y_pos = neuron.y as f64;
+                        if y_pos < y_low || y_pos > y_high || x_pos < x_low || x_pos > x_high {
+                            continue;
+                        }
+
+                        let dist = ((pos.x - x_pos).powi(2) + (pos.y - y_pos).powi(2)).sqrt();
+                        if dist < 0.35 {
+                            plot_ui.hline(HLine::new(-neuron.z).color(Color32::LIGHT_RED));
+                            let points = PlotPoints::new(pts.clone());
+                            plot_ui.points(
+                                Points::new(points)
+                                    .color(egui::Color32::LIGHT_RED)
+                                    .filled(false)
+                                    .radius(radius as f32 + 2.0),
+                            );
+                            let text_pos = [
+                                neuron.x as f64 + radius / 2.,
+                                -neuron.z as f64 + radius / 2.,
+                            ]
+                            .into();
+
+                            plot_ui.text(Text::new(text_pos, &neuron.name).highlight(true));
+                        }
                     }
                     let points = PlotPoints::new(pts);
                     let [r, g, b] = neuron.rgb();
