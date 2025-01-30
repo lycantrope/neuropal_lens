@@ -129,12 +129,10 @@ impl eframe::App for MyApp {
             .data
             .values()
             .filter(|x| {
-                [" ", ";", ","].iter().any(|delimiter| {
-                    self.label
-                        .split(delimiter)
-                        .filter(|x| !x.is_empty())
-                        .any(|pat| pat == "*" || x.name.starts_with(pat))
-                })
+                self.label
+                .split(&[' ', ';', ',', '\t'])
+                .filter(|x| !x.is_empty())
+                .any(|pat| pat == "*" || x.name.starts_with(pat))
             })
             .collect();
         data.sort_unstable_by_key(|x| &x.name);
