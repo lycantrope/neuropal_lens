@@ -36,6 +36,32 @@ impl Neuron {
 fn l2_dist(x1: f64, x2: f64, y1: f64, y2: f64) -> f64 {
     ((x1 - x2).powi(2) + (y1 - y2).powi(2)).sqrt()
 }
+#[derive(serde::Deserialize, serde::Serialize)]
+enum WormSide {
+    Left,
+    Right,
+    Both,
+}
+
+impl WormSide {
+    fn next(&self) -> Self {
+        match self {
+            Self::Left => Self::Right,
+            Self::Right => Self::Both,
+            Self::Both => Self::Left,
+        }
+    }
+}
+
+impl std::fmt::Display for WormSide {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Left => write!(f, "Left"),
+            Self::Right => write!(f, "Right"),
+            Self::Both => write!(f, "Both"),
+        }
+    }
+}
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -47,6 +73,7 @@ pub struct MyApp {
     data: HashMap<String, Neuron>,
 
     show_side_panel: bool,
+    view_side: WormSide,
 }
 
 impl Default for MyApp {
@@ -67,6 +94,7 @@ impl Default for MyApp {
             label: "*".to_owned(),
             data,
             show_side_panel: true,
+            view_side: WormSide::Both,
         }
     }
 }
@@ -152,6 +180,18 @@ impl eframe::App for MyApp {
                 });
 
                 ui.horizontal(|ui| {
+                    ui.label("Body Side:");
+                    let btn =
+                        egui::Button::new(RichText::new(self.view_side.to_string()).monospace())
+                            .min_size([180., 20.].into());
+
+                    if ui.add(btn).clicked() {
+                        self.view_side = self.view_side.next();
+                    }
+                });
+
+                ui.separator();
+                ui.horizontal(|ui| {
                     ui.label("Search: ");
                     ui.text_edit_singleline(&mut self.label);
                 });
@@ -163,7 +203,7 @@ impl eframe::App for MyApp {
             });
         }
         egui::CentralPanel::default().show(ctx, |ui| {
-            worm_canvas(ctx, ui, &data);
+            worm_canvas(ctx, ui, &data, &self.view_side);
         });
     }
 }
@@ -229,8 +269,14 @@ fn huge_content_painter(ui: &mut egui::Ui, data: &[&Neuron]) {
         });
 }
 
-fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
+fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron], worm_side: &WormSide) {
     let is_dark = ui.ctx().theme() == Theme::Dark;
+    let data: Vec<_> = match worm_side {
+        WormSide::Both => data.iter().collect(),
+        WormSide::Left => data.iter().filter(|n| n.z >= 0.).collect(),
+        WormSide::Right => data.iter().filter(|n| n.z < 0.).collect(),
+    };
+
     let response = egui_plot::Plot::new("xy")
         .height(500.)
         .data_aspect(1.0)
@@ -249,7 +295,7 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
             let scale = boundary.max()[0] - boundary.min()[0];
             let radius = (scale * -0.01 + 6.).clamp(1.0, 6.);
 
-            for neuron in data {
+            for neuron in &data {
                 let pts = vec![[neuron.x as f64, neuron.y as f64]];
                 let points = PlotPoints::new(pts);
                 let [r, g, b] = neuron.rgb();
@@ -320,7 +366,7 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
                     high = pos.x + thickness;
                 }
 
-                for neuron in data {
+                for neuron in &data {
                     let x_pos = neuron.x as f64;
                     if x_pos < low || x_pos > high {
                         continue;
@@ -409,7 +455,7 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
                     y_min = pos.y - thickness;
                     y_max = pos.y + thickness;
                 }
-                for neuron in data {
+                for neuron in &data {
                     let x_pos = neuron.x as f64;
                     let y_pos = neuron.y as f64;
                     if y_pos < y_min || y_pos > y_max || x_pos < x_min || x_pos > x_max {
