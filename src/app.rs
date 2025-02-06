@@ -51,6 +51,13 @@ impl WormSide {
             Self::Both => Self::Left,
         }
     }
+    fn color(&self) -> Color32 {
+        match self {
+            Self::Left => Color32::from_rgba_unmultiplied(131, 240, 22, 120),
+            Self::Right => Color32::from_rgba_unmultiplied(240, 22, 131, 120),
+            Self::Both => Color32::from_rgba_unmultiplied(22, 131, 240, 120),
+        }
+    }
 }
 
 impl std::fmt::Display for WormSide {
@@ -162,6 +169,11 @@ impl eframe::App for MyApp {
                     .filter(|x| !x.is_empty())
                     .any(|pat| pat == "*" || x.name.starts_with(pat))
             })
+            .filter(|x| match self.view_side {
+                WormSide::Left => x.z >= 0.,
+                WormSide::Right => x.z < 0.,
+                WormSide::Both => true,
+            })
             .collect();
         data.sort_unstable_by_key(|x| &x.name);
 
@@ -169,7 +181,7 @@ impl eframe::App for MyApp {
             egui::SidePanel::left("SideTool").show(ctx, |ui| {
                 // The central panel the region left after adding TopPanel's and SidePanel's
                 ui.horizontal(|ui| {
-                    ui.heading(RichText::new("NeuroPAL Lens"));
+                    ui.heading(RichText::new("NeuroPAL Lens").strong());
                     ui.spacing_mut().item_spacing.x = 0.0;
                     ui.label("(");
                     ui.hyperlink_to(
@@ -180,11 +192,12 @@ impl eframe::App for MyApp {
                 });
 
                 ui.horizontal(|ui| {
-                    ui.label("Body Side:");
-                    let btn =
-                        egui::Button::new(RichText::new(self.view_side.to_string()).monospace())
-                            .min_size([180., 20.].into());
-
+                    ui.label(RichText::new("Body Side:").heading());
+                    let btn = egui::Button::new(
+                        RichText::new(self.view_side.to_string()).heading().strong(),
+                    )
+                    .min_size([180., 20.].into());
+                    let btn = btn.fill(self.view_side.color());
                     if ui.add(btn).clicked() {
                         self.view_side = self.view_side.next();
                     }
@@ -203,7 +216,7 @@ impl eframe::App for MyApp {
             });
         }
         egui::CentralPanel::default().show(ctx, |ui| {
-            worm_canvas(ctx, ui, &data, &self.view_side);
+            worm_canvas(ctx, ui, &data);
         });
     }
 }
@@ -269,14 +282,8 @@ fn huge_content_painter(ui: &mut egui::Ui, data: &[&Neuron]) {
         });
 }
 
-fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron], worm_side: &WormSide) {
+fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron]) {
     let is_dark = ui.ctx().theme() == Theme::Dark;
-    let data: Vec<_> = match worm_side {
-        WormSide::Both => data.iter().collect(),
-        WormSide::Left => data.iter().filter(|n| n.z >= 0.).collect(),
-        WormSide::Right => data.iter().filter(|n| n.z < 0.).collect(),
-    };
-
     let response = egui_plot::Plot::new("xy")
         .height(500.)
         .data_aspect(1.0)
@@ -288,14 +295,14 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron], worm_si
         .include_x(0.0)
         .include_y(0.0)
         // .legend(Legend::default())
-        .x_axis_label("Anterior - Posterior")
-        .y_axis_label("Ventral - Dorsal")
+        .x_axis_label(RichText::new("Anterior - Posterior").strong())
+        .y_axis_label(RichText::new("Ventral - Dorsal").strong())
         .show(ui, |plot_ui| {
             let boundary = plot_ui.plot_bounds();
             let scale = boundary.max()[0] - boundary.min()[0];
             let radius = (scale * -0.01 + 6.).clamp(1.0, 6.);
 
-            for neuron in &data {
+            for neuron in data {
                 let pts = vec![[neuron.x as f64, neuron.y as f64]];
                 let points = PlotPoints::new(pts);
                 let [r, g, b] = neuron.rgb();
@@ -351,8 +358,8 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron], worm_si
             .include_x(15.0)
             .include_y(20.0)
             .include_y(-25.0)
-            .x_axis_label("Right - Left")
-            .y_axis_label("Ventral - Dorsal")
+            .x_axis_label(RichText::new("Right - Left").strong())
+            .y_axis_label(RichText::new("Ventral - Dorsal").strong())
             // .legend(Legend::default())
             .show(ui, |plot_ui| {
                 let boundary = plot_ui.plot_bounds();
@@ -366,7 +373,7 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron], worm_si
                     high = pos.x + thickness;
                 }
 
-                for neuron in &data {
+                for neuron in data {
                     let x_pos = neuron.x as f64;
                     if x_pos < low || x_pos > high {
                         continue;
@@ -439,8 +446,8 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron], worm_si
             .include_x(x_bound.1)
             .include_y(15.0)
             .include_y(-15.0)
-            .x_axis_label("Anterior - Posterior")
-            .y_axis_label("Left - Right")
+            .x_axis_label(RichText::new("Anterior - Posterior").strong())
+            .y_axis_label(RichText::new("Left - Right").strong())
             .show(ui, |plot_ui| {
                 let boundary = plot_ui.plot_bounds();
                 let scale = boundary.max()[0] - boundary.min()[0];
@@ -455,7 +462,7 @@ fn worm_canvas(ctx: &egui::Context, ui: &mut egui::Ui, data: &[&Neuron], worm_si
                     y_min = pos.y - thickness;
                     y_max = pos.y + thickness;
                 }
-                for neuron in &data {
+                for neuron in data {
                     let x_pos = neuron.x as f64;
                     let y_pos = neuron.y as f64;
                     if y_pos < y_min || y_pos > y_max || x_pos < x_min || x_pos > x_max {
